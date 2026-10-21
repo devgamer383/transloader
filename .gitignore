@@ -1,0 +1,18 @@
+# Binaries
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Ephemeral downloads
+downloads/
+
+# Test artifacts
+*.test
+*.out
+
+# Environment & IDE
+.env
+.idea/
+.vscode/

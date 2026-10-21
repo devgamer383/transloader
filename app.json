@@ -1,0 +1,41 @@
+{
+  "name": "Transloader",
+  "description": "High-speed multi-connection direct cloud file transloader with zero torrents for 100% Heroku TOS compliance.",
+  "keywords": ["transloader", "downloader", "multi-threaded", "go", "heroku", "accelerator"],
+  "repository": "https://github.com/your-username/transloader",
+  "logo": "https://raw.githubusercontent.com/feathericons/feather/master/icons/zap.svg",
+  "stack": "heroku-24",
+  "buildpacks": [
+    {
+      "url": "heroku/go"
+    }
+  ],
+  "env": {
+    "MAX_CONCURRENT_DOWNLOADS": {
+      "description": "Maximum number of downloads running simultaneously.",
+      "value": "3",
+      "required": false
+    },
+    "FILE_RETENTION_HOURS": {
+      "description": "Hours to retain files in ephemeral disk cache before automatic purge (default: 6).",
+      "value": "6",
+      "required": false
+    },
+    "ADMIN_PASSWORD": {
+      "description": "Optional HTTP Basic Auth password to protect your Transloader from unauthorized use.",
+      "value": "",
+      "required": false
+    },
+    "AUTO_INSTALL_YTDLP": {
+      "description": "Automatically download static yt-dlp binary if not present for media link extraction.",
+      "value": "true",
+      "required": false
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "eco"
+    }
+  }
+}

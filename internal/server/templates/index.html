@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚡ Transloader — Multi-Connection Direct Downloader</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Top Navigation Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="logo-icon">⚡</div>
+        <div class="brand-text">
+          <span class="brand-title">Transloader</span>
+          <span class="brand-badge">Multi-Connection Engine</span>
+        </div>
+      </div>
+
+      <div class="system-status" id="system-status">
+        <div class="status-item">
+          <span class="status-label">Memory</span>
+          <span class="status-value" id="ram-val">-- MB</span>
+        </div>
+        <div class="status-item disk-item">
+          <div class="status-label-row">
+            <span class="status-label">Ephemeral Disk</span>
+            <span class="status-value" id="disk-val">-- / --</span>
+          </div>
+          <div class="progress-bar-sm">
+            <div class="progress-fill-sm" id="disk-bar" style="width: 0%"></div>
+          </div>
+        </div>
+        <div class="status-pill active-pill">
+          <span class="pulse-dot"></span>
+          <span id="active-count-badge">0 Active</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <!-- Transload Input Card -->
+      <section class="card transload-card">
+        <div class="card-header">
+          <h2>Direct Transload</h2>
+          <span class="card-subtitle">Download remote files to server disk with multi-connection parallel acceleration</span>
+        </div>
+
+        <form id="transload-form" class="transload-form">
+          <div class="input-group">
+            <div class="input-wrapper">
+              <span class="input-icon">🔗</span>
+              <input 
+                type="url" 
+                id="url-input" 
+                placeholder="Enter direct HTTP/HTTPS, Google Drive, or media link..." 
+                required 
+                autocomplete="off"
+              >
+              <button type="button" id="paste-btn" class="btn-paste" title="Paste from clipboard">📋 Paste</button>
+            </div>
+            <button type="submit" class="btn-primary" id="submit-btn">
+              <span>Start Download</span>
+              <span class="arrow-icon">⚡</span>
+            </button>
+          </div>
+
+          <!-- Configuration Row: Connections & Filename -->
+          <div class="config-row">
+            <div class="form-field config-field">
+              <label for="connections-select">Parallel Connections</label>
+              <select id="connections-select" class="select-input">
+                <option value="4">4x Connections</option>
+                <option value="8" selected>8x Connections (Recommended)</option>
+                <option value="16">16x Connections (Maximum Throughput)</option>
+                <option value="1">1x Connection (Single Stream)</option>
+              </select>
+            </div>
+            <div class="form-field flex-2">
+              <label for="filename-input">Custom Filename (Optional)</label>
+              <input type="text" id="filename-input" placeholder="Leave empty to auto-detect from server">
+            </div>
+          </div>
+
+          <!-- Custom Headers Accordion -->
+          <details class="advanced-details" id="headers-accordion">
+            <summary class="advanced-summary">
+              <span>🔧 Custom HTTP Headers & Authentication (User-Agent, Cookies, Referer, Auth)</span>
+            </summary>
+            <div class="advanced-grid">
+              <div class="form-field">
+                <label for="ua-input">User-Agent</label>
+                <input type="text" id="ua-input" placeholder="Default: Modern Chrome browser User-Agent">
+              </div>
+              <div class="form-field">
+                <label for="cookie-input">Cookie Header</label>
+                <input type="text" id="cookie-input" placeholder="e.g. session=abc123xyz; token=eyJ...">
+              </div>
+              <div class="form-field">
+                <label for="referer-input">Referer Header</label>
+                <input type="text" id="referer-input" placeholder="e.g. https://source-domain.com/">
+              </div>
+              <div class="form-field">
+                <label for="auth-input">Authorization Header</label>
+                <input type="text" id="auth-input" placeholder="e.g. Bearer your_api_token">
+              </div>
+              <div class="form-field full-width">
+                <label for="custom-raw-headers">Additional Custom Headers (Key: Value per line)</label>
+                <textarea id="custom-raw-headers" rows="2" placeholder="X-Custom-Header: value&#10;Accept-Language: en-US,en;q=0.9"></textarea>
+              </div>
+              <div class="form-field checkbox-field">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="force-media-checkbox">
+                  <span>Force Media Extractor (yt-dlp for YouTube, Twitter/X, TikTok, etc.)</span>
+                </label>
+              </div>
+            </div>
+          </details>
+        </form>
+      </section>
+
+      <!-- Active Transfers Section -->
+      <section class="card" id="active-section">
+        <div class="card-header-flex">
+          <h2>Active Downloads</h2>
+          <span class="counter-badge" id="active-tasks-count">0</span>
+        </div>
+
+        <div id="active-tasks-list" class="tasks-list">
+          <div class="empty-state" id="tasks-empty">
+            <div class="empty-icon">⏳</div>
+            <p>No active downloads in progress.</p>
+            <small>Submit a download URL above to begin.</small>
+          </div>
+        </div>
+      </section>
+
+      <!-- Completed Downloads (Direct Downloadable) -->
+      <section class="card">
+        <div class="card-header-flex">
+          <div>
+            <h2>Direct Downloadable Files</h2>
+            <span class="card-subtitle">Stored on ephemeral disk with full RFC 7233 range & multi-threaded acceleration support.</span>
+          </div>
+          <div class="header-actions">
+            <input type="text" id="search-input" class="search-input" placeholder="🔍 Filter files...">
+            <button class="btn-danger-outline" id="clear-all-btn" title="Purge all files from disk">🗑️ Purge All</button>
+          </div>
+        </div>
+
+        <div id="files-list" class="files-grid">
+          <div class="empty-state" id="files-empty">
+            <div class="empty-icon">📦</div>
+            <p>No files downloaded yet.</p>
+            <small>Transloaded files will appear here with direct download links.</small>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="footer-content">
+        <span>⚡ <strong>Transloader</strong> — High-Speed Multi-Connection Downloader</span>
+        <span class="dot-separator">•</span>
+        <span>Ephemeral Cache (<span id="retention-label">6h</span> auto-purge)</span>
+        <span class="dot-separator">•</span>
+        <a href="/health" target="_blank" class="footer-link">Health Ping</a>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
