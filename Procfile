@@ -1,1 +1,1 @@
-web: bin/transloader
+web: transloader
