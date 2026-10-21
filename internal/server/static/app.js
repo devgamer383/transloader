@@ -151,16 +151,48 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetch('/api/tasks');
       if (res.ok) {
         const tasks = await res.json();
-        activeTasks.clear();
+        const liveIds = new Set();
+        let hasCompleted = false;
+
         for (const t of tasks) {
           if (t.status === 'pending' || t.status === 'downloading') {
+            liveIds.add(t.id);
             updateTaskElement(t);
+          } else if (activeTasks.has(t.id) && t.status === 'completed') {
+            removeTaskElement(t.id);
+            showToast(`Finished: ${t.filename}`, 'success');
+            hasCompleted = true;
+          } else if (activeTasks.has(t.id) && (t.status === 'failed' || t.status === 'cancelled')) {
+            removeTaskElement(t.id);
+            if (t.status === 'failed') {
+              showToast(`Failed: ${t.error_message || 'Download error'}`, 'error');
+            }
+          }
+        }
+
+        // Clean up tasks no longer active
+        for (const [id] of activeTasks) {
+          if (!liveIds.has(id)) {
+            removeTaskElement(id);
           }
         }
         updateTaskCounts();
+
+        if (hasCompleted) {
+          refreshFiles();
+          refreshStats();
+        }
       }
     } catch (e) {}
   }
+
+  // Active polling fallback: ensures progress updates continuously even if reverse proxies buffer SSE
+  setInterval(() => {
+    if (activeTasks.size > 0) {
+      refreshTasks();
+      refreshStats();
+    }
+  }, 1000);
 
   async function refreshFiles() {
     try {

@@ -137,8 +137,9 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Cache-Control", "no-cache, no-transform")
 	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	ch, unsubscribe := s.manager.Subscribe()
@@ -148,10 +149,16 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, ": ping\n\n")
 	flusher.Flush()
 
+	heartbeat := time.NewTicker(15 * time.Second)
+	defer heartbeat.Stop()
+
 	for {
 		select {
 		case <-r.Context().Done():
 			return
+		case <-heartbeat.C:
+			_, _ = fmt.Fprintf(w, ": heartbeat\n\n")
+			flusher.Flush()
 		case task, ok := <-ch:
 			if !ok {
 				return
