@@ -58,6 +58,7 @@ func (s *Server) setupRoutes() {
 
 		// Direct Download (with RFC 7233 range & multi-connection support)
 		protected.Get("/files/{name}", s.handleDownloadFile)
+		protected.Get("/files/*", s.handleDownloadFile)
 
 		// API routes
 		protected.Route("/api", func(api chi.Router) {
@@ -67,6 +68,7 @@ func (s *Server) setupRoutes() {
 			api.Post("/download", s.handleDownload)
 			api.Post("/cancel/{id}", s.handleCancel)
 			api.Delete("/files/{name}", s.handleDeleteFile)
+			api.Delete("/files/*", s.handleDeleteFile)
 			api.Delete("/files", s.handleDeleteAllFiles)
 			api.Get("/events", s.handleEvents)
 		})

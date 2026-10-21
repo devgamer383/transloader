@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"mime"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -399,7 +400,7 @@ func (m *Manager) ListFiles() ([]FileItem, error) {
 			ModTime:       info.ModTime(),
 			Extension:     ext,
 			MimeType:      mimeType,
-			DownloadURL:   fmt.Sprintf("/files/%s", entry.Name()),
+			DownloadURL:   fmt.Sprintf("/files/%s", url.PathEscape(entry.Name())),
 			ExpiresAt:     expiresAt,
 			ExpiresIn:     expiresIn,
 		}

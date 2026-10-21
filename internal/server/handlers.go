@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -111,10 +112,26 @@ func (s *Server) handleCancel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDeleteFile(w http.ResponseWriter, r *http.Request) {
-	filename := chi.URLParam(r, "name")
-	if err := s.manager.DeleteFile(filename); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	rawParam := chi.URLParam(r, "name")
+	if rawParam == "" {
+		rawParam = chi.URLParam(r, "*")
+	}
+
+	unescaped, err := url.PathUnescape(rawParam)
+	if err != nil {
+		unescaped = rawParam
+	}
+	if strings.Contains(unescaped, "+") {
+		if q, err := url.QueryUnescape(unescaped); err == nil {
+			unescaped = q
+		}
+	}
+
+	if err := s.manager.DeleteFile(unescaped); err != nil {
+		if err2 := s.manager.DeleteFile(rawParam); err2 != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"message": "File deleted"})
@@ -174,14 +191,36 @@ func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 
 // handleDownloadFile delivers the file directly as an attachment with full RFC 7233 byte-range support
 func (s *Server) handleDownloadFile(w http.ResponseWriter, r *http.Request) {
-	filename := chi.URLParam(r, "name")
-	cleanName := filepath.Base(filename)
+	rawParam := chi.URLParam(r, "name")
+	if rawParam == "" {
+		rawParam = chi.URLParam(r, "*")
+	}
+
+	unescaped, err := url.PathUnescape(rawParam)
+	if err != nil {
+		unescaped = rawParam
+	}
+	if strings.Contains(unescaped, "+") {
+		if q, err := url.QueryUnescape(unescaped); err == nil {
+			unescaped = q
+		}
+	}
+
+	cleanName := filepath.Base(unescaped)
 	filePath := filepath.Join(s.cfg.DownloadDir, cleanName)
 
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
-		http.NotFound(w, r)
-		return
+		// Fallback: check if rawParam literally exists
+		rawPath := filepath.Join(s.cfg.DownloadDir, filepath.Base(rawParam))
+		if fi, errRaw := os.Stat(rawPath); errRaw == nil {
+			filePath = rawPath
+			fileInfo = fi
+			cleanName = filepath.Base(rawParam)
+		} else {
+			http.NotFound(w, r)
+			return
+		}
 	}
 
 	if fileInfo.IsDir() {
@@ -189,8 +228,8 @@ func (s *Server) handleDownloadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Direct downloadable headers
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", cleanName))
+	// Direct downloadable headers (RFC 6266 + RFC 5987 for full browser & IDM compatibility)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename=%q; filename*=UTF-8''%s`, cleanName, url.PathEscape(cleanName)))
 	w.Header().Set("Accept-Ranges", "bytes")
 	w.Header().Set("Cache-Control", "private, max-age=3600")
 
