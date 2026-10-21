@@ -4,7 +4,7 @@
   <p><i>Strictly No-Torrents • Heroku TOS Compliant • Multi-Threaded Range Acceleration • Custom Headers Support • Ephemeral Auto-Purge Cache</i></p>
 
   <p>
-    <a href="https://heroku.com/deploy">
+    <a href="https://heroku.com/deploy?template=https://github.com/devgamer383/transloader">
       <img src="https://www.herokucdn.com/deploy/button.svg" alt="Deploy to Heroku">
     </a>
   </p>
@@ -58,7 +58,7 @@ It fetches large files from remote servers using **parallel multi-connection HTT
 ### Option A: 1-Click Deploy
 Click the **Deploy to Heroku** button above or use your GitHub repository URL:
 ```text
-https://heroku.com/deploy?template=https://github.com/<your-username>/transloader
+https://heroku.com/deploy?template=https://github.com/devgamer383/transloader
 ```
 
 ### Option B: Deploy via Heroku CLI

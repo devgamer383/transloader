@@ -2,7 +2,7 @@
   "name": "Transloader",
   "description": "High-speed multi-connection direct cloud file transloader with zero torrents for 100% Heroku TOS compliance.",
   "keywords": ["transloader", "downloader", "multi-threaded", "go", "heroku", "accelerator"],
-  "repository": "https://github.com/your-username/transloader",
+  "repository": "https://github.com/devgamer383/transloader",
   "logo": "https://raw.githubusercontent.com/feathericons/feather/master/icons/zap.svg",
   "stack": "heroku-24",
   "buildpacks": [

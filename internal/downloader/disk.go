@@ -7,42 +7,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"syscall"
 	"time"
 )
-
-// GetDiskStats calculates the disk usage of the volume containing targetDir
-func GetDiskStats(targetDir string) DiskStats {
-	var stat syscall.Statfs_t
-	err := syscall.Statfs(targetDir, &stat)
-	if err != nil {
-		return DiskStats{
-			TotalFormatted: "N/A",
-			FreeFormatted:  "N/A",
-			UsedFormatted:  "N/A",
-		}
-	}
-
-	bsize := uint64(stat.Bsize)
-	total := stat.Blocks * bsize
-	free := stat.Bavail * bsize
-	used := total - free
-
-	var usedPercent float64
-	if total > 0 {
-		usedPercent = (float64(used) / float64(total)) * 100
-	}
-
-	return DiskStats{
-		TotalBytes:     total,
-		FreeBytes:      free,
-		UsedBytes:      used,
-		UsedPercent:    usedPercent,
-		TotalFormatted: FormatBytesUint64(total),
-		FreeFormatted:  FormatBytesUint64(free),
-		UsedFormatted:  FormatBytesUint64(used),
-	}
-}
 
 // GetMemoryStats reports Go runtime memory statistics
 func GetMemoryStats() MemoryStats {
