@@ -200,6 +200,8 @@ func DownloadMultiConnection(
 	var lastDownloaded int64
 	lastUpdate := time.Now()
 	var currentSpeed int64
+	var smoothedSpeed float64
+	const alpha = 0.3 // EWMA smoothing factor for rock-solid speed measurement
 
 	progressCtx, cancelProgress := context.WithCancel(ctx)
 	defer cancelProgress()
@@ -220,7 +222,13 @@ func DownloadMultiConnection(
 
 				if elapsed > 0 {
 					delta := current - lastDownloaded
-					currentSpeed = int64(float64(delta) / elapsed)
+					instantSpeed := float64(delta) / elapsed
+					if smoothedSpeed == 0 {
+						smoothedSpeed = instantSpeed
+					} else {
+						smoothedSpeed = (alpha * instantSpeed) + ((1.0 - alpha) * smoothedSpeed)
+					}
+					currentSpeed = int64(smoothedSpeed)
 					lastDownloaded = current
 					lastUpdate = now
 				}

@@ -117,6 +117,8 @@ func DownloadDirectFile(
 	lastUpdate := startTime
 	var lastDownloaded int64
 	var currentSpeed int64
+	var smoothedSpeed float64
+	const alpha = 0.3
 
 	for {
 		select {
@@ -143,7 +145,13 @@ func DownloadDirectFile(
 			if elapsedSinceLast >= 300*time.Millisecond || readErr != nil {
 				deltaBytes := downloaded - lastDownloaded
 				if elapsedSinceLast > 0 {
-					currentSpeed = int64(float64(deltaBytes) / elapsedSinceLast.Seconds())
+					instantSpeed := float64(deltaBytes) / elapsedSinceLast.Seconds()
+					if smoothedSpeed == 0 {
+						smoothedSpeed = instantSpeed
+					} else {
+						smoothedSpeed = (alpha * instantSpeed) + ((1.0 - alpha) * smoothedSpeed)
+					}
+					currentSpeed = int64(smoothedSpeed)
 				}
 
 				lastUpdate = now
