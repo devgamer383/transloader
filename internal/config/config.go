@@ -1,6 +1,9 @@
 package config
 
 import (
+	"flag"
+	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -18,36 +21,77 @@ type Config struct {
 	PublicBaseURL     string
 }
 
-// Load loads the configuration from environment variables with sensible defaults
+// Load loads the configuration from flags and environment variables with sensible defaults
 func Load() *Config {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	defaultPort := os.Getenv("PORT")
+	if defaultPort == "" {
+		defaultPort = "8080"
 	}
 
-	downloadDir := os.Getenv("DOWNLOAD_DIR")
-	if downloadDir == "" {
-		downloadDir = "downloads"
+	defaultDir := os.Getenv("DOWNLOAD_DIR")
+	if defaultDir == "" {
+		defaultDir = "downloads"
 	}
 
-	// Ensure download directory is an absolute path or relative to current dir
+	defaultRetention := 6
+	if env := os.Getenv("FILE_RETENTION_HOURS"); env != "" {
+		if val, err := strconv.Atoi(env); err == nil && val >= 0 {
+			defaultRetention = val
+		}
+	}
+
+	defaultConcurrent := 3
+	if env := os.Getenv("MAX_CONCURRENT_DOWNLOADS"); env != "" {
+		if val, err := strconv.Atoi(env); err == nil && val > 0 && val <= 10 {
+			defaultConcurrent = val
+		}
+	}
+
+	// CLI flags
+	fs := flag.NewFlagSet("transloader", flag.ContinueOnError)
+	portFlag := fs.String("port", "", "Port to listen on (e.g. -port 8888 or -p 8888)")
+	pFlag := fs.String("p", "", "Shorthand for -port")
+	dirFlag := fs.String("dir", "", "Directory to store downloads")
+	retentionFlag := fs.Int("retention", -1, "File retention hours")
+	concurrencyFlag := fs.Int("concurrency", -1, "Max concurrent downloads")
+
+	_ = fs.Parse(os.Args[1:])
+
+	port := defaultPort
+	if *portFlag != "" {
+		port = *portFlag
+	} else if *pFlag != "" {
+		port = *pFlag
+	}
+
+	// Auto-check if port is available; if not and port was default 8080, find free port!
+	if port == "8080" && !isPortAvailable(port) {
+		for candidate := 8081; candidate <= 8090; candidate++ {
+			candStr := strconv.Itoa(candidate)
+			if isPortAvailable(candStr) {
+				port = candStr
+				break
+			}
+		}
+	}
+
+	downloadDir := defaultDir
+	if *dirFlag != "" {
+		downloadDir = *dirFlag
+	}
 	absDownloadDir, err := filepath.Abs(downloadDir)
 	if err == nil {
 		downloadDir = absDownloadDir
 	}
 
-	maxConcurrent := 3
-	if env := os.Getenv("MAX_CONCURRENT_DOWNLOADS"); env != "" {
-		if val, err := strconv.Atoi(env); err == nil && val > 0 && val <= 10 {
-			maxConcurrent = val
-		}
+	retentionHours := defaultRetention
+	if *retentionFlag >= 0 {
+		retentionHours = *retentionFlag
 	}
 
-	retentionHours := 6 // Default 6 hours ephemeral cache on Heroku
-	if env := os.Getenv("FILE_RETENTION_HOURS"); env != "" {
-		if val, err := strconv.Atoi(env); err == nil && val >= 0 {
-			retentionHours = val
-		}
+	maxConcurrent := defaultConcurrent
+	if *concurrencyFlag > 0 && *concurrencyFlag <= 16 {
+		maxConcurrent = *concurrencyFlag
 	}
 
 	adminPassword := os.Getenv("ADMIN_PASSWORD")
@@ -75,4 +119,13 @@ func Load() *Config {
 		AutoInstallYtDlp: autoInstallYtDlp,
 		PublicBaseURL:    publicBaseURL,
 	}
+}
+
+func isPortAvailable(port string) bool {
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
+	if err != nil {
+		return false
+	}
+	_ = ln.Close()
+	return true
 }
